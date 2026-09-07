@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Дневник ПГУПС</string>
+    <string name="widget_description">Пары на сегодня</string>
+</resources>
