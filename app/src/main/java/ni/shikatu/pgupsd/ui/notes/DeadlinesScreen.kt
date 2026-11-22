@@ -24,13 +24,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ni.shikatu.pgupsd.domain.Occurrence
 import ni.shikatu.pgupsd.ui.formatRange
 import ni.shikatu.pgupsd.ui.ruFull
 import ni.shikatu.pgupsd.ui.ruLong
+import ni.shikatu.pgupsd.ui.theme.Eyebrow
+import ni.shikatu.pgupsd.ui.theme.cardSurface
+import ni.shikatu.pgupsd.ui.theme.paperBorder
+import ni.shikatu.pgupsd.ui.theme.paperSubtle
 import java.time.LocalDate
 
 @Composable
@@ -51,11 +54,11 @@ fun DeadlinesScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            Text("Отслеживание", style = MaterialTheme.typography.headlineSmall)
+            Text("Отслеживание", style = MaterialTheme.typography.headlineMedium)
             Text(
                 text = "Включи тумблер на паре — она появится здесь",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = paperSubtle(),
                 modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
             )
         }
@@ -63,8 +66,9 @@ fun DeadlinesScreen(
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shape = MaterialTheme.shapes.large,
+                    color = cardSurface(),
+                    border = paperBorder(),
                 ) {
                     Text(
                         text = "Пока пусто. Открой нужный день, зайди в пару и включи отслеживание.",
@@ -91,10 +95,8 @@ private fun LazyListScope.deadlineSection(
 ) {
     if (items.isEmpty()) return
     item(key = "section-$title") {
-        Text(
+        Eyebrow(
             text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 2.dp),
         )
     }
@@ -115,8 +117,9 @@ private fun DeadlineCard(
     Surface(
         onClick = onOpen,
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = if (overdue) scheme.errorContainer.copy(alpha = 0.45f) else scheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.large,
+        color = if (overdue) scheme.errorContainer else cardSurface(),
+        border = if (overdue) null else paperBorder(),
     ) {
         Row(
             modifier = Modifier.padding(start = 16.dp, end = 4.dp, top = 14.dp, bottom = 14.dp),
@@ -146,7 +149,6 @@ private fun DeadlineCard(
                 Text(
                     text = lesson.subject,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )

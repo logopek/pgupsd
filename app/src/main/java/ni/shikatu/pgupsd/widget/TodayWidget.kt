@@ -12,6 +12,8 @@ import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.color.ColorProvider as DayNightColor
+import androidx.glance.material3.ColorProviders
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
@@ -50,6 +52,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import ni.shikatu.pgupsd.DeepLinks
 import ni.shikatu.pgupsd.PgupsApp
+import ni.shikatu.pgupsd.ui.theme.DarkColors
+import ni.shikatu.pgupsd.ui.theme.Ink
+import ni.shikatu.pgupsd.ui.theme.LightColors
 import ni.shikatu.pgupsd.domain.Occurrence
 import ni.shikatu.pgupsd.domain.isoWeekParity
 import ni.shikatu.pgupsd.ui.ru
@@ -59,6 +64,8 @@ import java.time.LocalTime
 import java.time.ZoneId
 
 internal const val ACTION_WIDGET_REFRESH = "ni.shikatu.pgupsd.widget.REFRESH"
+
+private val WidgetPaper = DayNightColor(day = Ink.bg, night = Ink.bgDark)
 
 class TodayWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Exact
@@ -98,7 +105,7 @@ class TodayWidget : GlanceAppWidget() {
             )
         }
         provideContent {
-            GlanceTheme {
+            GlanceTheme(colors = ColorProviders(light = LightColors, dark = DarkColors)) {
                 WidgetContent(
                     open = open,
                     badge = badge,
@@ -161,7 +168,7 @@ private fun WidgetContent(
         modifier = GlanceModifier
             .fillMaxSize()
             .appWidgetBackground()
-            .roundedFill(R.drawable.widget_background, GlanceTheme.colors.widgetBackground)
+            .roundedFill(R.drawable.widget_background, WidgetPaper)
             .widgetSystemRadius()
             .clickable(openApp),
     ) {
@@ -235,7 +242,7 @@ private fun WidgetContent(
 private fun OpenAppFiller(onOpen: androidx.glance.action.Action, modifier: GlanceModifier) {
     Box(
         modifier = modifier
-            .background(GlanceTheme.colors.widgetBackground)
+            .background(WidgetPaper)
             .clickable(onOpen),
     ) {}
 }
@@ -256,15 +263,15 @@ private fun PairRow(
     ) {
         Box(
             modifier = GlanceModifier
-                .roundedFill(R.drawable.widget_chip, GlanceTheme.colors.primaryContainer)
+                .roundedFill(R.drawable.widget_chip, GlanceTheme.colors.surfaceVariant)
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = line.time,
                 style = TextStyle(
-                    color = GlanceTheme.colors.onPrimaryContainer,
-                    fontWeight = FontWeight.Bold,
+                    color = GlanceTheme.colors.onSurface,
+                    fontWeight = FontWeight.Medium,
                     fontSize = 12.sp,
                 ),
                 maxLines = 1,

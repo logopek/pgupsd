@@ -9,6 +9,7 @@ import ni.shikatu.pgupsd.data.local.AppDatabase
 import ni.shikatu.pgupsd.data.local.ScheduleFiles
 import ni.shikatu.pgupsd.data.local.UserPrefs
 import ni.shikatu.pgupsd.data.remote.PgupsClient
+import ni.shikatu.pgupsd.data.plan.PlanRepository
 import ni.shikatu.pgupsd.data.repo.ScheduleRepository
 import ni.shikatu.pgupsd.widget.TodayWidget
 
@@ -28,6 +29,7 @@ class AppContainer(context: Context) {
     val prefs: UserPrefs = UserPrefs(appContext)
     val files: ScheduleFiles = ScheduleFiles(appContext)
     val client: PgupsClient = PgupsClient(cacheDir = appContext.cacheDir)
+    val plans: PlanRepository = PlanRepository(client, appContext)
     val repo: ScheduleRepository = ScheduleRepository(
         db = db,
         prefs = prefs,
@@ -44,6 +46,8 @@ class AppContainer(context: Context) {
                     ni.shikatu.pgupsd.ui.DiaryViewModel(repo)
                 modelClass.isAssignableFrom(ni.shikatu.pgupsd.ui.onboarding.OnboardingViewModel::class.java) ->
                     ni.shikatu.pgupsd.ui.onboarding.OnboardingViewModel(repo)
+                modelClass.isAssignableFrom(ni.shikatu.pgupsd.ui.plan.PlanViewModel::class.java) ->
+                    ni.shikatu.pgupsd.ui.plan.PlanViewModel(repo.profile, plans)
                 else -> error("Unknown ViewModel ${modelClass.name}")
             }
             return vm as T

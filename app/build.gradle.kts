@@ -88,8 +88,10 @@ dependencies {
     implementation(libs.androidx.glance.material3)
     implementation(libs.okhttp)
     implementation(libs.coil.compose)
+    implementation(libs.pdfbox.android)
 
     testImplementation(libs.junit)
+    testImplementation(libs.pdfbox.jvm)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)

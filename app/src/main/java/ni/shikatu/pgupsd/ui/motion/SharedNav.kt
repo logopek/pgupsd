@@ -76,6 +76,9 @@ fun Modifier.sharedLessonBounds(id: String): Modifier {
             animatedVisibilityScope = vis,
             boundsTransform = { _, _ -> SpatialSpring },
             resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+            // Stay in the list and under the bars. The overlay draws the card
+            // over the date row and the top bar, then clips it on the last frame.
+            renderInOverlayDuringTransition = false,
         )
     }
 }
@@ -94,6 +97,7 @@ fun Modifier.sharedLessonTitle(id: String): Modifier {
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.TopStart,
             ),
+            renderInOverlayDuringTransition = false,
         )
     }
 }

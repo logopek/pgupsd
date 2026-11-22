@@ -69,6 +69,26 @@ class PgupsClient(
             .build()
             .toString()
 
+    fun downloadBytes(url: String): ByteArray {
+        val slow = http.newBuilder()
+            .callTimeout(45, TimeUnit.SECONDS)
+            .readTimeout(45, TimeUnit.SECONDS)
+            .build()
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", USER_AGENT)
+            .header("Accept", "application/pdf,*/*")
+            .build()
+        slow.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw IOException("Не удалось скачать файл: HTTP ${response.code}")
+            }
+            val bytes = response.body?.bytes() ?: throw IOException("Пустой файл")
+            if (bytes.size < 64) throw IOException("Файл слишком маленький")
+            return bytes
+        }
+    }
+
     fun downloadXlsx(
         url: String,
         etag: String?,

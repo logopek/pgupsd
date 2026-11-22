@@ -56,6 +56,7 @@ class ScheduleRepository(
     val refreshing = MutableStateFlow(false)
     private val refreshMutex = Mutex()
     private val localNoteMutex = Mutex()
+    private val globalNoteMutex = Mutex()
 
     fun observeLessons(): Flow<List<Lesson>> = profile.flatMapLatest { user ->
         if (user == null) flowOf(emptyList())
@@ -293,7 +294,7 @@ class ScheduleRepository(
         subjectLabel: String,
         teacherLabel: String,
         text: String,
-    ) {
+    ) = globalNoteMutex.withLock {
         val existing = db.notes().findGlobal(subjectKey, teacherKey)
         val trimmed = text.trim()
         if (trimmed.isEmpty()) {

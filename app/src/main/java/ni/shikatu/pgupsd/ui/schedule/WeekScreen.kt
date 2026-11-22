@@ -1,27 +1,31 @@
 package ni.shikatu.pgupsd.ui.schedule
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChevronLeft
-import androidx.compose.material.icons.outlined.ChevronRight
-import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -35,7 +39,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,14 +53,20 @@ import ni.shikatu.pgupsd.domain.currentWindow
 import ni.shikatu.pgupsd.domain.dayItems
 import ni.shikatu.pgupsd.domain.isoWeekNumber
 import ni.shikatu.pgupsd.domain.isoWeekParity
+import ni.shikatu.pgupsd.domain.mondayOf
 import ni.shikatu.pgupsd.domain.pairNumber
 import ni.shikatu.pgupsd.ui.components.FeaturedLessonCard
 import ni.shikatu.pgupsd.ui.components.LessonCard
 import ni.shikatu.pgupsd.ui.formatDurationMinutes
 import ni.shikatu.pgupsd.ui.formatRange
-import ni.shikatu.pgupsd.ui.ruCapital
+import ni.shikatu.pgupsd.ui.ru
 import ni.shikatu.pgupsd.ui.ruFull
 import ni.shikatu.pgupsd.ui.ruLong
+import ni.shikatu.pgupsd.ui.ruShort
+import ni.shikatu.pgupsd.ui.theme.Eyebrow
+import ni.shikatu.pgupsd.ui.theme.cardSurface
+import ni.shikatu.pgupsd.ui.theme.paperBorder
+import ni.shikatu.pgupsd.ui.theme.paperSubtle
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -98,114 +111,196 @@ fun WeekScreen(
         if (swiped != date) onDateChange(swiped)
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    Column(modifier = modifier.fillMaxSize()) {
+        DayHeader(
+            pagerState = pagerState,
+            origin = origin,
+            today = today,
+            onDateChange = onDateChange,
+        )
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .clipToBounds(),
             beyondViewportPageCount = 1,
             key = { page -> dateOf(page, origin).toString() },
         ) { page ->
             val pageDate = dateOf(page, origin)
-            Column(modifier = Modifier.fillMaxSize()) {
-                DayHeaderCenter(
-                    date = pageDate,
-                    isToday = pageDate == today,
-                    onToday = { onDateChange(today) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 52.dp, end = 52.dp, top = 2.dp, bottom = 2.dp),
-                )
-                DayLessons(
-                    date = pageDate,
-                    occurrences = occurrencesFor(pageDate),
-                    isToday = pageDate == today,
-                    onOpen = onOpen,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = { onDateChange(date.minusDays(1)) }) {
-                Icon(Icons.Outlined.ChevronLeft, contentDescription = "Предыдущий день")
-            }
-            IconButton(onClick = { onDateChange(date.plusDays(1)) }) {
-                Icon(Icons.Outlined.ChevronRight, contentDescription = "Следующий день")
-            }
+            DayLessons(
+                date = pageDate,
+                occurrences = occurrencesFor(pageDate),
+                isToday = pageDate == today,
+                onOpen = onOpen,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }
 
 @Composable
-private fun DayHeaderCenter(
-    date: LocalDate,
-    isToday: Boolean,
-    onToday: () -> Unit,
-    modifier: Modifier = Modifier,
+private fun DayHeader(
+    pagerState: PagerState,
+    origin: LocalDate,
+    today: LocalDate,
+    onDateChange: (LocalDate) -> Unit,
 ) {
-    val parity = isoWeekParity(date)
+    val date = dateOf(pagerState.currentPage, origin)
     val scheme = MaterialTheme.colorScheme
     Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(scheme.background)
+            .padding(start = 16.dp, top = 0.dp, end = 16.dp, bottom = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
         ) {
-            Surface(
-                onClick = { if (!isToday) onToday() },
-                shape = RoundedCornerShape(50),
-                color = if (isToday) scheme.secondaryContainer else scheme.primaryContainer,
-                contentColor = if (isToday) scheme.onSecondaryContainer else scheme.onPrimaryContainer,
-                modifier = Modifier.width(96.dp),
-            ) {
-                Text(
-                    text = if (isToday) "Сегодня" else "К сегодня",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Clip,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+            Eyebrow(
+                text = "${isoWeekNumber(date)}-я неделя · ${isoWeekParity(date).ru()}",
+                modifier = Modifier.weight(1f),
+            )
+            val showReturn = date != today
+            val returnAlpha by animateFloatAsState(
+                targetValue = if (showReturn) 1f else 0f,
+                animationSpec = tween(160),
+                label = "return-today",
+            )
+            val returnToday = Modifier
+                .alpha(returnAlpha)
+                .clip(RoundedCornerShape(8.dp))
+                .then(
+                    if (showReturn) {
+                        Modifier.clickable { onDateChange(today) }
+                    } else {
+                        Modifier.clearAndSetSemantics {}
+                    },
                 )
-            }
+                .padding(horizontal = 4.dp, vertical = 2.dp)
             Text(
-                text = date.dayOfWeek.ruFull(),
-                modifier = Modifier
-                    .padding(start = 8.dp)
-                    .weight(1f, fill = false),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Clip,
-                autoSize = TextAutoSize.StepBased(
-                    minFontSize = 14.sp,
-                    maxFontSize = MaterialTheme.typography.titleLarge.fontSize,
-                ),
+                text = "К сегодня",
+                style = MaterialTheme.typography.labelLarge,
+                color = scheme.primary,
+                modifier = returnToday,
             )
         }
-        Text(
-            text = "${date.ruLong()} · ${isoWeekNumber(date)}-я, ${parity.ruCapital().lowercase()}",
-            modifier = Modifier.fillMaxWidth(),
-            style = MaterialTheme.typography.bodyMedium,
-            color = scheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Clip,
-            autoSize = TextAutoSize.StepBased(
-                minFontSize = 11.sp,
-                maxFontSize = MaterialTheme.typography.bodyMedium.fontSize,
-            ),
-        )
+        DayTitle(date = date)
+        WeekStrip(selected = date, today = today, onSelect = onDateChange)
+    }
+}
+
+@Composable
+private fun DayTitle(date: LocalDate) {
+    val shift = with(LocalDensity.current) { 20.dp.roundToPx() }
+    val titleStyle = MaterialTheme.typography.headlineSmall.copy(
+        fontSize = 24.sp,
+        lineHeight = 28.sp,
+    )
+    AnimatedContent(
+        targetState = date,
+        transitionSpec = {
+            val forward = targetState.isAfter(initialState)
+            val enterFrom = if (forward) shift else -shift
+            val exitTo = if (forward) -shift else shift
+            (
+                fadeIn(tween(240)) + slideInHorizontally(tween(240)) { enterFrom }
+            ) togetherWith (
+                fadeOut(tween(200)) + slideOutHorizontally(tween(200)) { exitTo }
+            ) using SizeTransform(clip = false) { _, _ -> snap() }
+        },
+        contentAlignment = Alignment.TopStart,
+        label = "day-title",
+    ) { shown ->
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = shown.dayOfWeek.ruFull(),
+                style = titleStyle,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
+                softWrap = false,
+            )
+            Text(
+                text = shown.ruLong(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                softWrap = false,
+            )
+        }
+    }
+}
+
+@Composable
+private fun WeekStrip(
+    selected: LocalDate,
+    today: LocalDate,
+    onSelect: (LocalDate) -> Unit,
+) {
+    val start = mondayOf(selected)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        for (offset in 0..6) {
+            val day = start.plusDays(offset.toLong())
+            DayChip(
+                day = day,
+                selected = day == selected,
+                today = day == today,
+                onClick = { onSelect(day) },
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun DayChip(
+    day: LocalDate,
+    selected: Boolean,
+    today: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val labelColor = when {
+        selected -> scheme.onPrimary.copy(alpha = 0.72f)
+        today -> scheme.primary
+        else -> paperSubtle()
+    }
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(42.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = if (selected) scheme.primary else cardSurface(),
+        contentColor = if (selected) scheme.onPrimary else scheme.onSurface,
+        border = if (selected) null else paperBorder(),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = day.dayOfWeek.ruShort().lowercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = labelColor,
+                maxLines = 1,
+                softWrap = false,
+            )
+            Text(
+                text = day.dayOfMonth.toString(),
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = 16.sp,
+                    lineHeight = 18.sp,
+                ),
+                maxLines = 1,
+                softWrap = false,
+            )
+        }
     }
 }
 
@@ -222,15 +317,16 @@ private fun DayLessons(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 4.dp, end = 4.dp, top = 8.dp, bottom = 28.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 28.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (occurrences.isEmpty()) {
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shape = MaterialTheme.shapes.large,
+                    color = cardSurface(),
+                    border = paperBorder(),
                 ) {
                     Text(
                         text = if (date.dayOfWeek == DayOfWeek.SUNDAY) {
@@ -238,7 +334,7 @@ private fun DayLessons(
                         } else {
                             "В этот день пар нет"
                         },
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(24.dp),
                     )
@@ -263,22 +359,16 @@ private fun DayLessons(
                     pairNumber = pairNumbers[split.featured.key] ?: 1,
                     badge = split.featuredBadge,
                     onClick = { onOpen(split.featured) },
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                 )
             }
         } else if (isToday && split.past.isNotEmpty() && split.upcoming.isEmpty()) {
             item {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                ) {
-                    Text(
-                        text = "На сегодня пары закончились",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(16.dp),
-                    )
-                }
+                Text(
+                    text = "На сегодня пары закончились",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = paperSubtle(),
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
+                )
             }
         }
 
@@ -312,11 +402,9 @@ private fun DayLessons(
 
 private fun LazyListScope.sectionTitle(title: String) {
     item(key = "section-$title") {
-        Text(
+        Eyebrow(
             text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 12.dp, top = 12.dp, bottom = 4.dp),
+            modifier = Modifier.padding(start = 4.dp, top = 14.dp, bottom = 2.dp),
         )
     }
 }
@@ -348,8 +436,6 @@ private fun LazyListScope.lessonItems(
                         LessonCard(
                             occurrence = occ,
                             pairNumber = pairNumbers[occ.key] ?: (i + 1),
-                            index = i,
-                            count = group.size,
                             muted = muted,
                             onClick = { onOpen(occ) },
                         )
@@ -368,42 +454,20 @@ private fun WindowCard(
     muted: Boolean = false,
     now: LocalTime = LocalTime.now(),
 ) {
-    val scheme = MaterialTheme.colorScheme
     val minutes = java.time.temporal.ChronoUnit.MINUTES.between(start, end)
     val remaining = java.time.temporal.ChronoUnit.MINUTES.between(now, end).coerceAtLeast(0)
-    Surface(
+    val label = if (live) "Сейчас окно" else "Окно"
+    val extra = if (live) "ещё ${formatDurationMinutes(remaining)}" else formatDurationMinutes(minutes)
+    Text(
+        text = "$label · ${formatRange(start, end)} · $extra",
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp)
-            .then(if (muted) Modifier.alpha(0.55f) else Modifier),
-        shape = MaterialTheme.shapes.large,
-        color = if (live) scheme.secondaryContainer else scheme.surfaceContainer,
-        contentColor = if (live) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(Icons.Outlined.Schedule, contentDescription = null, modifier = Modifier.size(20.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = if (live) "Сейчас окно" else "Окно",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = formatRange(start, end),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            Text(
-                text = if (live) "ещё ${formatDurationMinutes(remaining)}" else formatDurationMinutes(minutes),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-    }
+            .padding(horizontal = 4.dp, vertical = 4.dp)
+            .then(if (muted) Modifier.alpha(0.7f) else Modifier),
+        style = MaterialTheme.typography.bodySmall,
+        color = if (live) MaterialTheme.colorScheme.primary else paperSubtle(),
+        textAlign = TextAlign.Center,
+    )
 }
 
 private const val PagerDayCount = 10_000

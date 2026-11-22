@@ -16,6 +16,8 @@ navigationCompose = "2.9.6"
 datastore = "1.1.7"
 glance = "1.1.1"
 coil = "2.7.0"
+pdfbox = "2.0.27.0"
+pdfboxJvm = "2.0.27"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -44,6 +46,8 @@ androidx-glance-appwidget = { group = "androidx.glance", name = "glance-appwidge
 androidx-glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfbox" }
+pdfbox-jvm = { group = "org.apache.pdfbox", name = "pdfbox", version.ref = "pdfboxJvm" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

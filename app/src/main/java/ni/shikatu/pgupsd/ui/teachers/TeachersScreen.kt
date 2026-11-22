@@ -36,24 +36,26 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.debounce
 import ni.shikatu.pgupsd.domain.GlobalNote
 import ni.shikatu.pgupsd.domain.TeacherCard
 import ni.shikatu.pgupsd.domain.normalizeKey
 import ni.shikatu.pgupsd.ui.dialPhone
+import ni.shikatu.pgupsd.ui.notes.rememberNoteDraft
 import ni.shikatu.pgupsd.ui.motion.sharedTeacherBounds
 import ni.shikatu.pgupsd.ui.sendEmail
+import ni.shikatu.pgupsd.ui.theme.Eyebrow
+import ni.shikatu.pgupsd.ui.theme.cardSurface
+import ni.shikatu.pgupsd.ui.theme.paperBorder
+import ni.shikatu.pgupsd.ui.theme.paperSubtle
+import ni.shikatu.pgupsd.ui.theme.paperTopBarColors
 
 @Composable
 fun TeachersScreen(
@@ -78,11 +80,11 @@ fun TeachersScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            Text("Преподаватели", style = MaterialTheme.typography.headlineSmall)
+            Text("Преподаватели", style = MaterialTheme.typography.headlineMedium)
             Text(
                 text = "Карточки с сайта ПГУПС · из твоего расписания",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = paperSubtle(),
                 modifier = Modifier.padding(top = 4.dp),
             )
             OutlinedTextField(
@@ -94,15 +96,16 @@ fun TeachersScreen(
                 leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
                 placeholder = { Text("Имя, кафедра, предмет") },
                 singleLine = true,
-                shape = MaterialTheme.shapes.large,
+                shape = MaterialTheme.shapes.medium,
             )
         }
         if (filtered.isEmpty()) {
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shape = MaterialTheme.shapes.large,
+                    color = cardSurface(),
+                    border = paperBorder(),
                 ) {
                     Text(
                         text = if (teachers.isEmpty()) "В расписании пока нет преподавателей" else "Никого не нашлось",
@@ -131,8 +134,9 @@ private fun TeacherListCard(
         modifier = Modifier
             .fillMaxWidth()
             .sharedTeacherBounds(card.teacher.key),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = scheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.large,
+        color = cardSurface(),
+        border = paperBorder(),
     ) {
         Row(
             modifier = Modifier.padding(14.dp),
@@ -147,7 +151,6 @@ private fun TeacherListCard(
                 Text(
                     text = card.displayName,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -186,8 +189,8 @@ internal fun TeacherPhoto(
     Surface(
         modifier = Modifier.size(size.dp),
         shape = shape,
-        color = scheme.secondaryContainer,
-        contentColor = scheme.onSecondaryContainer,
+        color = scheme.surfaceVariant,
+        contentColor = scheme.onSurface,
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
@@ -213,7 +216,7 @@ private fun MetaPill(text: String) {
     val scheme = MaterialTheme.colorScheme
     Surface(
         shape = RoundedCornerShape(50),
-        color = scheme.surfaceContainerHighest,
+        color = scheme.surfaceVariant,
         contentColor = scheme.onSurfaceVariant,
     ) {
         Text(
@@ -225,7 +228,7 @@ private fun MetaPill(text: String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TeacherDetailScreen(
     card: TeacherCard,
@@ -243,9 +246,11 @@ fun TeacherDetailScreen(
     val scheme = MaterialTheme.colorScheme
     Scaffold(
         modifier = Modifier.sharedTeacherBounds(card.teacher.key),
+        containerColor = scheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Преподаватель") },
+                title = {},
+                colors = paperTopBarColors(),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Назад")
@@ -281,7 +286,6 @@ fun TeacherDetailScreen(
                             Text(
                                 text = card.displayName,
                                 style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.SemiBold,
                             )
                             if (staff == null) {
                                 Text(
@@ -452,8 +456,9 @@ private fun InfoBlock(
     val scheme = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = scheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.large,
+        color = cardSurface(),
+        border = paperBorder(),
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -466,37 +471,38 @@ private fun InfoBlock(
                 if (icon != null) {
                     Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = scheme.primary)
                 }
-                Text(title, style = MaterialTheme.typography.titleSmall, color = scheme.onSurfaceVariant)
+                Eyebrow(title)
             }
             content()
         }
     }
 }
 
-@OptIn(FlowPreview::class)
 @Composable
 private fun SubjectNoteField(
     subject: String,
     initial: String,
     onSave: (String) -> Unit,
 ) {
-    var text by remember(subject, initial) { mutableStateOf(initial) }
-    LaunchedEffect(subject) {
-        snapshotFlow { text }.debounce(400).collect(onSave)
-    }
+    val draft = rememberNoteDraft(
+        identity = subject,
+        saved = initial,
+        onSave = onSave,
+    )
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.large,
+        color = cardSurface(),
+        border = paperBorder(),
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(subject, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(subject, style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
+                value = draft.text,
+                onValueChange = draft.onChange,
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
                 shape = MaterialTheme.shapes.large,
